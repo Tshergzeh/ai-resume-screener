@@ -14,7 +14,7 @@ from ..models import User, JobCreate, Job, JobRead, JobUpdate
 load_dotenv()
 router = APIRouter()
 
-@router.post("/jobs", tags=["jobs"])
+@router.post("/jobs", tags=["jobs"], status_code=201)
 async def create_job(
     job: JobCreate, 
     session: SessionDep, 

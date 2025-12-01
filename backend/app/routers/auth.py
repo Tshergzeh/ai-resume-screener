@@ -51,7 +51,7 @@ async def get_current_user(
         raise credentials_exception
     return UserRead.model_validate(user, from_attributes=True)
 
-@router.post("/auth/register", tags=["auth"])
+@router.post("/auth/register", tags=["auth"], status_code=201)
 async def register(user: UserRegister, session: SessionDep):
     existing_user = session.exec(select(User).where(User.email == user.email)).first()
     if existing_user:
