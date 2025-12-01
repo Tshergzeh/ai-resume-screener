@@ -1,14 +1,19 @@
 import uuid
-
+from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional
+from functools import partial
+from sqlalchemy import Text
+
+# User models
 
 class User(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     email: EmailStr = Field(unique=True, index=True, max_length=255)
     name: Optional[str] = Field(default=None, max_length=255)
     password: str = Field(max_length=128)
+    jobs: list["Job"] = Relationship(back_populates="user")
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -19,7 +24,36 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-class UserRead(SQLModel):
+class UserRead(BaseModel):
     id: str
     email: EmailStr
     name: Optional[str] = None
+
+# Job models
+
+class Job(SQLModel, table=True):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    title: str = Field(max_length=255)
+    description: str = Field(sa_type=Text)
+    created_by: str = Field(foreign_key="user.id")
+    created_at: datetime = Field(default_factory=partial(datetime.now, timezone.utc))
+    user: Optional[User] = Relationship(back_populates="jobs")
+    
+class JobCreate(BaseModel):
+    title: str
+    description: str
+
+class JobRead(BaseModel):
+    id: str
+    title: str
+    description: str
+    created_by: str
+    created_at: datetime
+
+    # class Config:
+    #     orm_mode = True
+
+class JobUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+
