@@ -67,3 +67,17 @@ async def update_job(
     session.commit()
     session.refresh(job)
     return JobRead.model_validate(job, from_attributes=True)
+
+@router.delete("/jobs/{job_id}", tags=["jobs"], status_code=204)
+async def delete_job(
+    job_id: str,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user)):
+    job = session.exec(
+        select(Job).where(Job.id == job_id, Job.created_by == current_user.id)
+    ).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    session.delete(job)
+    session.commit()
+
