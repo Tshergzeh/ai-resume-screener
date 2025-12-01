@@ -1,0 +1,6 @@
+fastapi[standard]==0.121.2
+sqlmodel==0.0.27
+psycopg==3.2.13
+argon2-cffi==25.1.0
+pwdlib==0.3.0
+pyjwt==2.10.1
