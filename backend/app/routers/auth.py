@@ -54,5 +54,5 @@ async def login(user: UserLogin, session: SessionDep):
     except:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
-    token = create_access_token({"sub": str(db_user.id)})
+    token = create_access_token({"sub": str(db_user.id)}, expires_delta=timedelta(days=7))
     return {"access_token": token, "token_type": "bearer", "user": UserRead.model_validate(db_user)}
