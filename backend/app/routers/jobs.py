@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from .auth import get_current_user
 
 from ..db import SessionDep
-from ..models import User, JobCreate, Job, JobRead
+from ..models import User, JobCreate, Job, JobRead, JobUpdate
 
 load_dotenv()
 router = APIRouter()
@@ -48,4 +48,22 @@ async def read_job(
         raise HTTPException(status_code=404, detail="Job not found")
     return JobRead.model_validate(job, from_attributes=True)
 
-
+@router.put("/jobs/{job_id}", tags=["jobs"])
+async def update_job(
+    job_id: str,
+    job_update: JobUpdate,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user)):
+    job = session.exec(
+        select(Job).where(Job.id == job_id, Job.created_by == current_user.id)
+    ).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job_update.title is not None:
+        job.title = job_update.title
+    if job_update.description is not None:
+        job.description = job_update.description
+    session.add(job)
+    session.commit()
+    session.refresh(job)
+    return JobRead.model_validate(job, from_attributes=True)
