@@ -29,3 +29,23 @@ async def create_job(
     session.refresh(new_job)
     return JobRead.model_validate(new_job, from_attributes=True)
 
+@router.get("/jobs", tags=["jobs"])
+async def read_jobs(
+    session: SessionDep,
+    current_user: User = Depends(get_current_user)):
+    jobs = session.exec(select(Job).where(Job.created_by == current_user.id)).all()
+    return [JobRead.model_validate(job, from_attributes=True) for job in jobs]
+
+@router.get("/jobs/{job_id}", tags=["jobs"])
+async def read_job(
+    job_id: str,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user)):
+    job = session.exec(
+        select(Job).where(Job.id == job_id, Job.created_by == current_user.id)
+    ).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return JobRead.model_validate(job, from_attributes=True)
+
+
