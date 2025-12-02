@@ -92,7 +92,6 @@ class ResumeRead(BaseModel):
     id: str
     job_id: str
     file_path: str
-    extracted_data: Optional[str]
     parsed_data: Optional[Dict[str, Any]]
     score: Optional[float]
     status: ResumeStatus

@@ -39,9 +39,7 @@ async def get_current_user(
     )
     try:
         payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        print(payload)
         user_id = payload.get("sub")
-        print(user_id)
         if user_id is None:
             raise credentials_exception
     except jwt.PyJWTError:
