@@ -3,6 +3,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlmodel import select
 from dotenv import load_dotenv
+from pypdf import PdfReader
 
 from .auth import get_current_user
 from ..db import SessionDep
@@ -13,9 +14,28 @@ router = APIRouter()
 
 UPLOAD_DIRECTORY = os.getenv("UPLOAD_DIRECTORY", "uploaded_resumes")
 TEXT_DATA_DIRECTORY = os.getenv("TEXT_DATA_DIRECTORY", "extracted_text")
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx"}
 
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 os.makedirs(TEXT_DATA_DIRECTORY, exist_ok=True)
+
+def extract_text(file_path: str) -> str:
+    extension = os.path.splitext(file_path)[1].lower()
+    text = ""
+    try:
+        if extension == ".txt":
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+        elif extension == ".pdf":
+            reader = PdfReader(file_path)
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+        else:
+            text = ""
+    except Exception as e:
+        text = ""
+        print(f"Failed to extract text from {file_path}: {e}")
+    return text
 
 
 @router.post("/resumes", tags=["resumes"], status_code=201)
@@ -34,7 +54,9 @@ async def upload_resume(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    file_extention = os.path.splitext(file.filename)[1]
+    file_extention = os.path.splitext(file.filename)[1].lower()
+    if file_extention not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
     stored_filename = f"{current_user.id}_{job_id}_{int(datetime.now().timestamp())}{file_extention}"
     stored_path = os.path.join(UPLOAD_DIRECTORY, stored_filename)
 
@@ -42,11 +64,12 @@ async def upload_resume(
         content = await file.read()
         f.write(content)
 
-    try:
-        with open(stored_path, "r", encoding="utf-8", errors="ignore") as f:
-            extracted_text = f.read()
-    except Exception:
-        extracted_text = ""
+    extracted_text = extract_text(stored_path)
+    if not extracted_text:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to extract text from the uploaded resume"
+        )
 
     extracted_filename = stored_filename + ".txt"
     extracted_path = os.path.join(TEXT_DATA_DIRECTORY, extracted_filename)

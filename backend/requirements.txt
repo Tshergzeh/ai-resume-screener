@@ -4,3 +4,4 @@ psycopg==3.2.13
 argon2-cffi==25.1.0
 pwdlib==0.3.0
 pyjwt==2.10.1
+pypdf==6.4.0
