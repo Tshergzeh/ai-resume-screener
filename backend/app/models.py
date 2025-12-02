@@ -72,7 +72,7 @@ class Resume(SQLModel, table=True):
     file_path: str
     parsed_data: Optional[Dict[str, Any]] = Field(
         default=None,
-        sa_column=Field(sa_column=JSONB)
+        sa_column=Column(JSONB)
     )
     score: Optional[float] = None
     status: ResumeStatus = Field(
@@ -83,7 +83,7 @@ class Resume(SQLModel, table=True):
     max_retries: int = Field(default=3)
     processing_log: Optional[List[Dict[str, Any]]] = Field(
         default_factory=list,
-        sa_column=Field(sa_column=JSONB)
+        sa_column=Column(JSONB)
     )
     created_at: datetime = Field(default_factory=partial(datetime.now, timezone.utc))
     job: Optional[Job] = Relationship(back_populates="resumes")
