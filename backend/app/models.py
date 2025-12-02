@@ -68,6 +68,7 @@ class ResumeStatus(str, Enum):
 class Resume(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     job_id: str = Field(foreign_key="job.id", index=True)
+    user_id: str = Field(foreign_key="user.id", index=True)
     file_path: str
     parsed_data: Optional[Dict[str, Any]] = Field(
         default=None,
