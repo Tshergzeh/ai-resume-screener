@@ -78,8 +78,10 @@ class Resume(SQLModel, table=True):
         default=ResumeStatus.PENDING,
         sa_column=Column(SQLEnum(ResumeStatus))
     )
+    retry_count: int = Field(default=0)
+    max_retries: int = Field(default=3)
     processing_log: Optional[List[Dict[str, Any]]] = Field(
-        default=None,
+        default_factory=list,
         sa_column=Field(sa_column=JSONB)
     )
     created_at: datetime = Field(default_factory=partial(datetime.now, timezone.utc))
