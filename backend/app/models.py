@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Field, SQLModel, Relationship
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from functools import partial
 from sqlalchemy import Text, Column, Enum as SQLEnum
 from enum import Enum
@@ -69,7 +69,6 @@ class Resume(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     job_id: str = Field(foreign_key="job.id", index=True)
     file_path: str
-    extracted_data: Optional[str] = Field(default=None, sa_type=Text)
     parsed_data: Optional[Dict[str, Any]] = Field(
         default=None,
         sa_column=Field(sa_column=JSONB)
