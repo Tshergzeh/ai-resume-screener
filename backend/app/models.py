@@ -78,6 +78,10 @@ class Resume(SQLModel, table=True):
         default=ResumeStatus.PENDING,
         sa_column=Column(SQLEnum(ResumeStatus))
     )
+    processing_log: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        sa_column=Field(sa_column=JSONB)
+    )
     created_at: datetime = Field(default_factory=partial(datetime.now, timezone.utc))
     job: Optional[Job] = Relationship(back_populates="resumes")
 
