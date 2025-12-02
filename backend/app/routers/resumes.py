@@ -1,0 +1,101 @@
+import os
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from sqlmodel import select
+from dotenv import load_dotenv
+from pypdf import PdfReader
+from docx import Document
+
+from .auth import get_current_user
+from ..db import SessionDep
+from ..models import User, Job, Resume, ResumeRead
+
+load_dotenv()
+router = APIRouter()
+
+UPLOAD_DIRECTORY = os.getenv("UPLOAD_DIRECTORY", "uploaded_resumes")
+TEXT_DATA_DIRECTORY = os.getenv("TEXT_DATA_DIRECTORY", "extracted_text")
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx"}
+
+os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+os.makedirs(TEXT_DATA_DIRECTORY, exist_ok=True)
+
+def extract_text(file_path: str) -> str:
+    extension = os.path.splitext(file_path)[1].lower()
+    text = ""
+    try:
+        if extension == ".txt":
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                text = f.read()
+        elif extension == ".pdf":
+            reader = PdfReader(file_path)
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+        elif extension == ".docx":
+            doc = Document(file_path)
+            for para in doc.paragraphs:
+                text += para.text + "\n"
+        else:
+            text = ""
+    except Exception as e:
+        text = ""
+        print(f"Failed to extract text from {file_path}: {e}")
+    return text
+
+
+@router.post("/resumes", tags=["resumes"], status_code=201)
+async def upload_resume(
+    file: UploadFile,
+    job_id: str,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user)
+):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    
+    job = session.exec(
+        select(Job).where(Job.id == job_id, Job.created_by == current_user.id)
+    ).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    file_extention = os.path.splitext(file.filename)[1].lower()
+    if file_extention not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+    stored_filename = f"{current_user.id}_{job_id}_{int(datetime.now().timestamp())}{file_extention}"
+    stored_path = os.path.join(UPLOAD_DIRECTORY, stored_filename)
+
+    with open(stored_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    extracted_text = extract_text(stored_path)
+    if not extracted_text:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to extract text from the uploaded resume"
+        )
+
+    extracted_filename = stored_filename + ".txt"
+    extracted_path = os.path.join(TEXT_DATA_DIRECTORY, extracted_filename)
+
+    with open(extracted_path, "w", encoding="utf-8") as f:
+        f.write(extracted_text)
+
+    event = {
+        "event": "uploaded",
+        "timestamp": datetime.now().isoformat(),
+        "extracted_text_path": extracted_path,
+    }
+
+    new_resume = Resume(
+        job_id=job_id,
+        user_id=current_user.id,
+        file_path=stored_path,
+        processing_log=[event],
+    )
+
+    session.add(new_resume)
+    session.commit()
+    session.refresh(new_resume)
+    return ResumeRead.model_validate(new_resume)
