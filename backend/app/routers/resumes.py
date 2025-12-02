@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlmodel import select
 from dotenv import load_dotenv
 from pypdf import PdfReader
+from docx import Document
 
 from .auth import get_current_user
 from ..db import SessionDep
@@ -30,6 +31,10 @@ def extract_text(file_path: str) -> str:
             reader = PdfReader(file_path)
             for page in reader.pages:
                 text += page.extract_text() + "\n"
+        elif extension == ".docx":
+            doc = Document(file_path)
+            for para in doc.paragraphs:
+                text += para.text + "\n"
         else:
             text = ""
     except Exception as e:
